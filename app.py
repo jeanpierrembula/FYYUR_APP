@@ -2,7 +2,6 @@
 # Imports
 #----------------------------------------------------------------------------#
 
-import json
 import dateutil.parser
 import babel
 from flask import (
@@ -24,7 +23,6 @@ from forms import *
 from flask_migrate import Migrate
 from sqlalchemy.sql import text
 from datetime import date, datetime
-#from models import *
 import sys
 #----------------------------------------------------------------------------#
 # App Config.
@@ -61,6 +59,8 @@ class Venue(db.Model):
     genres = db.Column(db.String(120), nullable = False)
     shows = db.relationship('show', backref ='venues')
 
+    artists = db.relationship('Artist', secondary='shows')
+
 class Artist(db.Model):
     __tablename__ = 'Artist'
 
@@ -79,6 +79,9 @@ class Artist(db.Model):
     seeking_description = db.Column(db.String())
     shows = db.relationship('show', backref ='artists')
 
+    venues = db.relationship('Venue', secondary='shows')
+  
+
 # TERMINÉ Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 class show(db.Model):
     __tablename__ = 'show'
@@ -86,6 +89,9 @@ class show(db.Model):
     start_date = db.Column(db.DateTime, nullable = False)
     venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id',ondelete="SET NULL",onupdate="cascade"))
     artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id',ondelete="SET NULL", onupdate="cascade"))
+
+    venue = db.relationship('Venue')
+    artist = db.relationship('Artist')
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -119,36 +125,34 @@ def venues():
   # TERMINÉ: replace with real venues data.
   #       num_upcoming_shows should be aggreq_get_artated based on number of upcoming shows per venue.
   try:
-    VillesEtat = Venue.query.with_entities(Venue.city, Venue.state).group_by(Venue.city, Venue.state).all() # toutes les paires uniques {city, state}
-    venues = [] # stocker les lieux pour chaque paire
-    Donnee_lieux = [] # la liste que nous passons au render_template
+    VillesEtat = Venue.query.with_entities(Venue.city, Venue.state).group_by(Venue.city, Venue.state).all()
+    venues = [] 
+    Donnee_lieux = []
     
     for city_state in VillesEtat:
-        ville_etat_shows_dictt = {} 
-        ville_etat_shows_dictt['city'] = city_state[0]
-        ville_etat_shows_dictt['state'] = city_state[1]
-        Donnee_lieux.append(ville_etat_shows_dictt)      
-        try:
-          lieu = Venue.query.with_entities(Venue.id, Venue.name).filter(Venue.city == city_state[0] , Venue.state == city_state[1]).all()
-        except:
-          lieu = []
-      
-        venues.append(lieu)
+      ville_etat_shows_dictt = {} 
+      ville_etat_shows_dictt['city'] = city_state[0]
+      ville_etat_shows_dictt['state'] = city_state[1]
+      Donnee_lieux.append(ville_etat_shows_dictt)      
+      try:
+        lieu = Venue.query.with_entities(Venue.id, Venue.name).filter(Venue.city == city_state[0] , Venue.state == city_state[1]).all()
+      except:
+        lieu = []
+    
+      venues.append(lieu)
     
     for i,v in zip(range(len(venues)),venues):
-        list_lieux = [] 
-        for each in v:
-            ville_etat_shows_dictt = {}
-            try:
-                ville_etat_shows_dictt['num_upcoming_shows'] = show.query.filter(show.venue_id == each[0], show.start_date > date.now()).count()
-            except:
-                ville_etat_shows_dictt['num_upcoming_shows'] = 0
-            ville_etat_shows_dictt['id'] = each[0]
-            ville_etat_shows_dictt['name'] = each[1]
-            list_lieux.append(ville_etat_shows_dictt)
-        # maintenant list_lieux contient tous les lieux avec la ith paire {ville, état}
-        # donc je les stocke dans la liste qui sera passée à render_template.
-        Donnee_lieux[i]['venues'] = list_lieux  
+      list_lieux = [] 
+      for each in v:
+        ville_etat_shows_dictt = {}
+        try:
+          ville_etat_shows_dictt['num_upcoming_shows'] = show.query.filter(show.venue_id == each[0], show.start_date > date.now()).count()
+        except:
+          ville_etat_shows_dictt['num_upcoming_shows'] = 0
+        ville_etat_shows_dictt['id'] = each[0]
+        ville_etat_shows_dictt['name'] = each[1]
+        list_lieux.append(ville_etat_shows_dictt)
+      Donnee_lieux[i]['venues'] = list_lieux  
         
     return render_template('pages/venues.html', areas=Donnee_lieux)
   except Exception as e:
@@ -229,34 +233,33 @@ def create_venue_form():
 
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
-    # TERMINÉ: insert form data as a new Venue record in the db, instead
-    # TERMINÉ : modify data to be the data object returned from db insertion
-    form = VenueForm(request.form)
-    if form.validate_on_submit():
-      try:
-        object_lieu = Venue()
-        if form.image_link.data == '':
-          form.image_link.data = 'https://images.pond5.com/music-venue-word-cloud-animated-footage-107230910_iconl.jpeg'
-        
-        form.populate_obj(object_lieu)
-        object_lieu.genres = ', '.join(form.genres.data)
-        db.session.add(object_lieu)
-        db.session.commit()
-        # TODO: on unsuccessful db insert, flash an error instead.
-        # on successful db insert, flash success
-        flash('Venue ' + object_lieu.name + ' was successfully listed!')
-      except:
-        print(sys.exc_info())
-        db.session.rollback()
-        flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
-      finally:
-        db.session.close()
-      return redirect('/venues')
-    else:
-      for key in form.errors:
-        flash(key +" : "+' '.join(form.errors[key]))
-      return render_template('forms/new_venue.html', form=VenueForm())
-
+  # TERMINÉ: insert form data as a new Venue record in the db, instead
+  # TERMINÉ : modify data to be the data object returned from db insertion
+  form = VenueForm(request.form)
+  if form.validate_on_submit():
+    try:
+      object_lieu = Venue()
+      if form.image_link.data == '':
+        form.image_link.data = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrbEwKOiJdjiddcv71U5-4QuJIz_PmdxWCiQ&usqp=CAU'
+      
+      form.populate_obj(object_lieu)
+      object_lieu.genres = ', '.join(form.genres.data)
+      db.session.add(object_lieu)
+      db.session.commit()
+      # TERMINÉ: on unsuccessful db insert, flash an error instead.
+      # on successful db insert, flash success
+      flash('Venue ' + object_lieu.name + '  A été listé avec succès !')
+    except:
+      print(sys.exc_info())
+      db.session.rollback()
+      flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
+    finally:
+      db.session.close()
+    return redirect('/venues')
+  else:
+    for key in form.errors:
+      flash(key +" : "+' '.join(form.errors[key]))
+    return render_template('forms/new_venue.html', form=VenueForm())
 
   # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
@@ -275,11 +278,11 @@ def delete_venue(venue_id):
     flash('The Venue was deleted successfully!.')
     return jsonify({'success': True}) 
   except Exception as e:
-      print(e)
-      db.session.rollback()
-      flash('An error occurred. could not delete the venue.')
-      db.session.close()
-      return jsonify({'success': False}) 
+    print(e)
+    db.session.rollback()
+    flash('An error occurred. could not delete the venue.')
+    db.session.close()
+    return jsonify({'success': False}) 
 
   # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
   # clicking that button delete it from the db then redirect the user to the homepage
@@ -289,7 +292,7 @@ def delete_venue(venue_id):
 #  ----------------------------------------------------------------
 @app.route('/artists')
 def artists():
-  # TODO: replace with real data returned from querying the database
+  # TERMINÉ: replace with real data returned from querying the database
   req_query_artist = Artist.query.with_entities(Artist.id, Artist.name).all()
   data = []
   for arts in req_query_artist:
@@ -412,7 +415,7 @@ def edit_artist_submission(artist_id):
       object_artite.seeking_venue = form.seeking_venue.data
       object_artite.image_link = form.image_link.data
       db.session.commit()
-      flash('Artist ' + object_artite.name + ' was successfully edited!')
+      flash('Artist ' + object_artite.name + '  A été listé avec succès !')
     except:
       print(sys.exc_info())
       db.session.rollback()
@@ -429,7 +432,7 @@ def edit_artist_submission(artist_id):
 def edit_venue(venue_id):
   form = VenueForm()
 
-  # TODO: populate form with values from venue with ID <venue_id>
+  # TERMINÉ: populate form with values from venue with ID <venue_id>
   data = Venue.query.get(venue_id).__shows_dictt__
   try:
     venue_data={
@@ -453,13 +456,13 @@ def edit_venue(venue_id):
     return redirect('/venues/'+str(venue_id))
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
-  # TODO: take values from the form submitted, and update existing
+  # TERMINÉ: take values from the form submitted, and update existing
   # venue record with ID <venue_id> using the new attributes
   form = VenueForm(request.form)
   if form.validate_on_submit():
     try:
       if form.image_link.data == '':
-        form.image_link.data = 'https://images.pond5.com/music-venue-word-cloud-animated-footage-107230910_iconl.jpeg'
+        form.image_link.data = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrbEwKOiJdjiddcv71U5-4QuJIz_PmdxWCiQ&usqp=CAU'
       object_lieu = Venue.query.get(venue_id)
           
       object_lieu.name = form.name.data
@@ -474,11 +477,11 @@ def edit_venue_submission(venue_id):
       object_lieu.seeking_talent = form.seeking_talent.data
       object_lieu.image_link = form.image_link.data
       db.session.commit()
-      flash('Venue ' + object_lieu.name + ' was successfully edited!')
+      flash('Venue ' + object_lieu.name + '  A été listé avec succès !')
     except:
       print(sys.exc_info())
       db.session.rollback()
-      flash('An error occurred. Venue ' + form.name.data + ' could not be edited.')
+      flash('Une erreur s\'est produite. Lieu ' + form.name.data + ' n\'a pas pu être modifié.')
     finally:
       db.session.close()
     return redirect('/venues/'+str(venue_id))     
@@ -498,8 +501,8 @@ def create_artist_form():
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
   # called upon submitting the new artist listing form
-  # TODO: insert form data as a new Venue record in the db, instead
-  # TODO: modify data to be the data object returned from db insertion
+  # TERMINÉ: insert form data as a new Venue record in the db, instead
+  # TERMINÉ: modify data to be the data object returned from db insertion
 
   form = ArtistForm(request.form)
   if form.validate_on_submit():
@@ -512,8 +515,8 @@ def create_artist_submission():
       db.session.add(artist_obj)
       db.session.commit()
       # on successful db insert, flash success
-      # TODO: on unsuccessful db insert, flash an error instead.
-      flash('Artist ' + artist_obj.name + ' was successfully listed!')
+      # TERMINÉ: on unsuccessful db insert, flash an error instead.
+      flash('Artist ' + artist_obj.name + '  A été listé avec succès !')
     except:
       db.session.rollback()
       print(sys.exc_info())
@@ -533,7 +536,7 @@ def create_artist_submission():
 @app.route('/shows')
 def shows():
   # displays list of shows at /shows
-  # TODO: replace with real venues data.
+  # TERMINÉ: replace with real venues data.
   try:
       shows = show.query.with_entities(Venue.id, Venue.name, Artist.id, Artist.name, Artist.image_link, show.start_date).join(Venue).join(Artist).all()
   except:
@@ -560,7 +563,7 @@ def create_shows():
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
-  # TODO: insert form data as a new Show record in the db, instead
+  # TERMINÉ: insert form data as a new Show record in the db, instead
   form = ShowForm(request.form)
   if form.validate_on_submit():
     try:
@@ -568,11 +571,11 @@ def create_show_submission():
       form.populate_obj(object_show)
       db.session.add(object_show)
       db.session.commit()
-      flash('The Show was successfully listed!')
+      flash('Le spectacle  A été listé avec succès !')
       return redirect('/')
     except :
       print(sys.exc_info())
-      flash('An error occurred. Show could not be listed, make sure the venue and the artist exist!')
+      flash('Une erreur s\'est produite. Le spectacle n\'a pas pu être listé, vérifiez que le lieu et l\'artiste existent !')
       db.session.rollback()
       db.session.close()
       return redirect('/shows/create')
