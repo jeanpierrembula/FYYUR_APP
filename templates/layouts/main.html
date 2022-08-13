@@ -78,9 +78,9 @@
             </li>
           </ul>
           <ul class="nav navbar-nav">
-            <li {% if request.endpoint == 'venues' %} class="active" {% endif %}><a href="{{ url_for('venues') }}">Venues</a></li>
-            <li {% if request.endpoint == 'artists' %} class="active" {% endif %}><a href="{{ url_for('artists') }}">Artists</a></li>
-            <li {% if request.endpoint == 'shows' %} class="active" {% endif %}><a href="{{ url_for('shows') }}">Shows</a></li>
+            <li {% if request.endpoint == 'venues' %} class="active" {% endif %}><a href="{{ url_for('venues') }}">Lieux</a></li>
+            <li {% if request.endpoint == 'artists' %} class="active" {% endif %}><a href="{{ url_for('artists') }}">Artistes</a></li>
+            <li {% if request.endpoint == 'shows' %} class="active" {% endif %}><a href="{{ url_for('shows') }}">Spectacles</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -108,7 +108,7 @@
 
   <div id="footer">
     <div class="container">
-      <p>Fyyur &copy; All Rights Reserved.</p>
+      <p>Fyyur &copy; Tous droits réservés.</p>
       {% block footer %}{% endblock %}
     </div>
   </div>
