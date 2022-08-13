@@ -122,13 +122,13 @@ def venues():
     venues = [] 
     Donnee_lieux = []
     
-    for city_state in VillesEtat:
+    for cs in VillesEtat:
       ville_etat_shows_dictt = {} 
-      ville_etat_shows_dictt['city'] = city_state[0]
-      ville_etat_shows_dictt['state'] = city_state[1]
+      ville_etat_shows_dictt['city'] = cs[0]
+      ville_etat_shows_dictt['state'] = cs[1]
       Donnee_lieux.append(ville_etat_shows_dictt)      
       try:
-        lieu = Venue.query.with_entities(Venue.id, Venue.name).filter(Venue.city == city_state[0] , Venue.state == city_state[1]).all()
+        lieu = Venue.query.with_entities(Venue.id, Venue.name).filter(Venue.city == cs[0] , Venue.state == cs[1]).all()
       except:
         lieu = []
     
@@ -161,10 +161,10 @@ def search_venues():
   req_get = '%'+request.form.get('search_term')+'%'
   req_venues = Venue.query.with_entities(Venue.id,Venue.name).filter(Venue.name.ilike(req_get)).all()
   data = []
-  for ven in req_venues:
+  for vn in req_venues:
     shows_dict = {}
-    shows_dict['id'] = ven[0]
-    shows_dict['name'] = ven[1]
+    shows_dict['id'] = vn[0]
+    shows_dict['name'] = vn[1]
     data.append(shows_dict)
   response = {
     'count':len(req_venues),
@@ -268,12 +268,12 @@ def delete_venue(venue_id):
     Venue.query.filter_by(id = venue_id).delete()
     db.session.commit()
     db.session.close()
-    flash('The Venue was deleted successfully!.')
+    flash('Le Venue a été supprimé avec succès !.')
     return jsonify({'success': True}) 
   except Exception as e:
     print(e)
     db.session.rollback()
-    flash('An error occurred. could not delete the venue.')
+    flash('Une erreur s\'est produite. Impossible de supprimer le lieu.')
     db.session.close()
     return jsonify({'success': False}) 
 
