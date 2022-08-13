@@ -2,6 +2,7 @@
 # Imports
 #----------------------------------------------------------------------------#
 
+import json
 import dateutil.parser
 import babel
 from flask import (
@@ -59,8 +60,6 @@ class Venue(db.Model):
     genres = db.Column(db.String(120), nullable = False)
     shows = db.relationship('show', backref ='venues')
 
-    artists = db.relationship('Artist', secondary='shows')
-
 class Artist(db.Model):
     __tablename__ = 'Artist'
 
@@ -79,9 +78,6 @@ class Artist(db.Model):
     seeking_description = db.Column(db.String())
     shows = db.relationship('show', backref ='artists')
 
-    venues = db.relationship('Venue', secondary='shows')
-  
-
 # TERMINÉ Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 class show(db.Model):
     __tablename__ = 'show'
@@ -89,9 +85,6 @@ class show(db.Model):
     start_date = db.Column(db.DateTime, nullable = False)
     venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id',ondelete="SET NULL",onupdate="cascade"))
     artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id',ondelete="SET NULL", onupdate="cascade"))
-
-    venue = db.relationship('Venue')
-    artist = db.relationship('Artist')
 
 #----------------------------------------------------------------------------#
 # Filters.
