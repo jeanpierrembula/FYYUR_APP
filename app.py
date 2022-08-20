@@ -3,6 +3,7 @@
 #----------------------------------------------------------------------------#
 
 import json
+from os import abort
 import dateutil.parser
 import babel
 from flask import (
@@ -25,6 +26,7 @@ from flask_migrate import Migrate
 from sqlalchemy.sql import text
 from datetime import date, datetime
 import sys
+from models import *
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -36,55 +38,6 @@ db = SQLAlchemy(app)
 
 # TERMINÉ: connect to a local postgresql database
 migrate = Migrate(app= app, db= db) #je connecte l'application à une base de donnée local
-
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
-
-class Venue(db.Model):
-    __tablename__ = 'Venue'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable = False)
-    city = db.Column(db.String(120), nullable = False)
-    state = db.Column(db.String(120), nullable = False)
-    address = db.Column(db.String(120), nullable = False)
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TERMINÉ: implement any missing fields, as a database migration using Flask-Migrate
-    seeking_description = db.Column(db.String())
-    seeking_talent = db.Column(db.Boolean, nullable = False)
-    website = db.Column(db.String(120))
-    genres = db.Column(db.String(120), nullable = False)
-    shows = db.relationship('show', backref ='venues')
-
-class Artist(db.Model):
-    __tablename__ = 'Artist'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable = False)
-    city = db.Column(db.String(120), nullable = False)
-    state = db.Column(db.String(120), nullable = False)
-    phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120), nullable = False)
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TERMINÉ: implement any missing fields, as a database migration using Flask-Migrate
-    website = db.Column(db.String(120))
-    seeking_venue = db.Column(db.Boolean, nullable = False)
-    seeking_description = db.Column(db.String())
-    shows = db.relationship('show', backref ='artists')
-
-# TERMINÉ Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
-class show(db.Model):
-    __tablename__ = 'show'
-    id = db.Column(db.Integer, primary_key = True)
-    start_date = db.Column(db.DateTime, nullable = False)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id',ondelete="SET NULL",onupdate="cascade"))
-    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id',ondelete="SET NULL", onupdate="cascade"))
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -361,6 +314,7 @@ def show_artist(artist_id):
 #  ----------------------------------------------------------------
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
+  objet_artist = Artist()
   form = ArtistForm()
   data = Artist.query.get(artist_id)
   try:
@@ -377,7 +331,19 @@ def edit_artist(artist_id):
       "seeking_description": data.seeking_description,
       "image_link": data.image_link
     }
+    
     form.genres.data = artist_data['genres']
+    form.name.data = artist_data['name']
+    form.city.data = artist_data['city']
+    form.state.data = artist_data['state']
+    form.phone.data = artist_data['phone']
+    #form.website.data = artist_data['website']
+    form.facebook_link.data = artist_data['facebook_link']
+    form.seeking_venue.data = artist_data['seeking_venue']
+    form.seeking_description.data = artist_data['seeking_description']
+    form.image_link.data = artist_data['image_link']
+
+   
     return render_template('forms/edit_artist.html', form=form, artist = artist_data)
   # TODO: populate form with fields from artist with ID <artist_id>
   except :
@@ -387,35 +353,36 @@ def edit_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-  # TERMINÉ: take values from the form submitted, and update existing
+  # DONE: take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
+    # venue record with ID <venue_id> using the new attributes
   form = ArtistForm(request.form)
   if form.validate_on_submit():
     try:
-      
+        # Default image
       if form.image_link.data == '':
         form.image_link.data = 'https://cdn.pixabay.com/photo/2018/04/18/18/56/user-3331257__340.png'
-      object_artite = Artist.query.get(artist_id)
-          
-      object_artite.name = form.name.data
-      object_artite.city = form.city.data
-      object_artite.state = form.state.data
-      object_artite.phone = form.phone.data
-      object_artite.genres = ', '.join(form.genres.data)
-      object_artite.facebook_link = form.facebook_link.data
-      object_artite.website = form.website.data
-      object_artite.seeking_description = form.seeking_description.data
-      object_artite.seeking_venue = form.seeking_venue.data
-      object_artite.image_link = form.image_link.data
+        objet_artist = Artist.query.get(artist_id)
+            
+      objet_artist.name = form.name.data
+      objet_artist.city = form.city.data
+      objet_artist.state = form.state.data
+      objet_artist.phone = form.phone.data
+      objet_artist.genres = ', '.join(form.genres.data)
+      objet_artist.facebook_link = form.facebook_link.data
+      #objet_artist.website = form.website.data
+      objet_artist.seeking_description = form.seeking_description.data
+      objet_artist.seeking_venue = form.seeking_venue.data
+      objet_artist.image_link = form.image_link.data
       db.session.commit()
-      flash('Artist ' + object_artite.name + '  A été listé avec succès !')
+      flash('Artist ' + objet_artist.name + ' was successfully edited!')
     except:
       print(sys.exc_info())
       db.session.rollback()
       flash('An error occurred. Artist ' + form.name.data + ' could not be edited.')
     finally:
       db.session.close()
-      return redirect('/artists/'+str(artist_id))
+    return redirect('/artists/'+str(artist_id))
   else:
     for key in form.errors:
       flash(key +" : "+' '.join(form.errors[key]))
@@ -426,7 +393,8 @@ def edit_venue(venue_id):
   form = VenueForm()
 
   # TERMINÉ: populate form with values from venue with ID <venue_id>
-  data = Venue.query.get(venue_id).__shows_dictt__
+  # data = Venue.query.get(venue_id)
+  data = Venue.query.get(venue_id).__dict__
   try:
     venue_data={
       "id": data['id'],
@@ -442,46 +410,70 @@ def edit_venue(venue_id):
       "seeking_description": data['seeking_description'],
       "image_link": data['image_link']
     }
-    form.genres.data = venue_data['genres']
-    return render_template('forms/edit_venue.html', form=form, venue = venue_data)
+    form.genres.data = data['genres']
+    form.name.data = data['name']
+    form.city.data = data['city']
+    form.state.data = data['state']
+    form.address.data = data['address']
+    form.phone.data = data['phone']
+    form.website.data = data['website']
+    form.facebook_link.data = data['facebook_link']
+    form.seeking_talent.data = data['seeking_talent']
+    form.seeking_talent.data = data['seeking_talent']
+    form.image_link.data = data['image_link']
+
+    return render_template('forms/edit_venue.html', form=form, venue = venue_data )
   except :
-    print(sys.exc_info())
-    return redirect('/venues/'+str(venue_id))
+      print(sys.exc_info())
+      return redirect('/venues/'+str(venue_id))
+
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
-  # TERMINÉ: take values from the form submitted, and update existing
-  # venue record with ID <venue_id> using the new attributes
-  form = VenueForm(request.form)
-  if form.validate_on_submit():
+    error = False
+
+    name = request.form['name']
+    city = request.form['city']
+    state = request.form['state']
+    address = request.form['address']
+    phone = request.form['phone']
+    genres = request.form.getlist('genres')
+    image_link = request.form['image_link']
+    facebook_link = request.form['facebook_link']
+    website = request.form['website']
+    seeking_talent = True if 'seeking_talent' in request.form else False
+    seeking_description = request.form['seeking_description']
+
     try:
-      if form.image_link.data == '':
-        form.image_link.data = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrbEwKOiJdjiddcv71U5-4QuJIz_PmdxWCiQ&usqp=CAU'
-      object_lieu = Venue.query.get(venue_id)
-          
-      object_lieu.name = form.name.data
-      object_lieu.city = form.city.data
-      object_lieu.state = form.state.data
-      object_lieu.phone = form.phone.data
-      object_lieu.address = form.address.data
-      object_lieu.genres = ', '.join(form.genres.data)
-      object_lieu.facebook_link = form.facebook_link.data
-      object_lieu.website = form.website.data
-      object_lieu.seeking_description = form.seeking_description.data
-      object_lieu.seeking_talent = form.seeking_talent.data
-      object_lieu.image_link = form.image_link.data
-      db.session.commit()
-      flash('Venue ' + object_lieu.name + '  A été listé avec succès !')
-    except:
-      print(sys.exc_info())
-      db.session.rollback()
-      flash('Une erreur s\'est produite. Lieu ' + form.name.data + ' n\'a pas pu être modifié.')
+        venue = Venue.query.get(venue_id)
+
+
+        venue.name = name
+        venue.city = city
+        venue.state = state
+        venue.address = address
+        venue.phone = phone
+        venue.genres = genres
+        venue.image_link = image_link
+        venue.facebook_link = facebook_link
+        venue.website = website
+        venue.seeking_talent = seeking_talent
+        venue.seeking_description = seeking_description
+
+        db.session.commit()
+    except Exception:
+        error = True
+        db.session.rollback()
+        print(sys.exc_info())
     finally:
-      db.session.close()
-    return redirect('/venues/'+str(venue_id))     
-  else:
-    for key in form.errors:
-      flash(key +" : "+' '.join(form.errors[key]))
-    return redirect('/venues/'+str(venue_id)+'/edit')
+        db.session.close()
+
+    if error:
+      abort(400)
+      flash('An error occurred. Venue ' + name + ' could not be updated.')
+    if not error:
+        flash('Venue ' + name + ' was successfully updated!')
+
+    return redirect(url_for('show_venue', venue_id=venue_id))
 
 #  Create Artist
 #  ----------------------------------------------------------------
@@ -500,16 +492,15 @@ def create_artist_submission():
   form = ArtistForm(request.form)
   if form.validate_on_submit():
     try:
-      artist_obj = Artist()
-      if form.image_link.data == '':
-          form.image_link.data = 'https://cdn.pixabay.com/photo/2018/04/18/18/56/user-3331257__340.png'
-      form.populate_obj(artist_obj)
-      artist_obj.genres = ', '.join(form.genres.data)
-      db.session.add(artist_obj)
+      objet_artist = Artist()
+      
+      form.populate_obj(objet_artist)
+      objet_artist.genres = ', '.join(form.genres.data)
+      db.session.add(objet_artist)
       db.session.commit()
       # on successful db insert, flash success
       # TERMINÉ: on unsuccessful db insert, flash an error instead.
-      flash('Artist ' + artist_obj.name + '  A été listé avec succès !')
+      flash('Artist ' + objet_artist.name + '  A été listé avec succès !')
     except:
       db.session.rollback()
       print(sys.exc_info())
