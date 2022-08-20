@@ -460,6 +460,7 @@ def edit_venue_submission(venue_id):
         venue.seeking_description = seeking_description
 
         db.session.commit()
+      
     except Exception:
         error = True
         db.session.rollback()
